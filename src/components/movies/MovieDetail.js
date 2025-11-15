@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { movieService } from '../../services/movieService';
 import ShareButton from '../share/ShareButton';
 import MovieNotes from '../notes/MovieNotes';
@@ -6,25 +6,69 @@ import MovieNotes from '../notes/MovieNotes';
 function MovieDetail({ movieId, isOpen, onClose }) {
   const [movieDetail, setMovieDetail] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
+
+  const fetchMovieDetail = React.useCallback(async () => {
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new AbortController
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await movieService.getMovieDetails(movieId, abortController.signal);
+
+      // Check if request was aborted
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      if (result.success) {
+        setMovieDetail(result.movie);
+        setError(null);
+      } else {
+        setMovieDetail(null);
+        setError(result.error);
+      }
+    } catch (err) {
+      // Ignore abort errors
+      if (err.name !== 'AbortError' && !abortController.signal.aborted) {
+        setMovieDetail(null);
+        setError('Terjadi kesalahan saat mengambil detail film');
+      }
+    } finally {
+      if (!abortController.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [movieId]);
 
   useEffect(() => {
     if (isOpen && movieId) {
       fetchMovieDetail();
     } else {
       setMovieDetail(null);
+      setError(null);
+      // Cancel any pending requests when modal closes
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     }
-  }, [isOpen, movieId]);
 
-  const fetchMovieDetail = async () => {
-    setLoading(true);
-    const result = await movieService.getMovieDetails(movieId);
-    
-    if (result.success) {
-      setMovieDetail(result.movie);
-    }
-    
-    setLoading(false);
-  };
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [isOpen, movieId, fetchMovieDetail]);
 
   if (!isOpen) return null;
 
@@ -37,9 +81,28 @@ function MovieDetail({ movieId, isOpen, onClose }) {
       <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
         
-        {loading && <div className="loading">Memuat detail film...</div>}
+        {loading && (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">Memuat detail film...</div>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="error-container">
+            <div className="error-icon">⚠️</div>
+            <div className="error-title">Gagal Memuat Detail</div>
+            <div className="error-message">{error}</div>
+            <button 
+              className="error-retry-btn"
+              onClick={fetchMovieDetail}
+            >
+              Coba Lagi
+            </button>
+          </div>
+        )}
         
-        {movieDetail && !loading && (
+        {movieDetail && !loading && !error && (
           <div className="movie-detail">
             <div className="detail-poster">
               <img

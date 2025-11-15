@@ -1,6 +1,11 @@
 // API Configuration
-export const API_KEY = 'your-api-key-here';
-export const API_BASE_URL = 'http://www.omdbapi.com/';
+// Semua konfigurasi API diambil dari environment variables di file .env
+// Setup file .env di root project dengan:
+// REACT_APP_OMDB_API_KEY=your-api-key-here
+// REACT_APP_OMDB_API_BASE_URL=http://www.omdbapi.com/
+export const API_KEY = process.env.REACT_APP_OMDB_API_KEY || '';
+export const API_BASE_URL = process.env.REACT_APP_OMDB_API_BASE_URL || 'http://www.omdbapi.com/';
+// Format standar OMDB API: http://www.omdbapi.com/?apikey=8bc427e5&i=tt3896198
 export const API_URL = `${API_BASE_URL}?apikey=${API_KEY}&`;
 
 // LocalStorage Keys

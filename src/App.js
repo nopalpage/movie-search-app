@@ -15,6 +15,8 @@ import Pagination from './components/pagination/Pagination';
 import DarkModeToggle from './components/settings/DarkModeToggle';
 import DataManagement from './components/settings/DataManagement';
 import Modal from './components/common/Modal';
+import WelcomeScreen from './components/common/WelcomeScreen';
+import SkeletonLoader from './components/common/SkeletonLoader';
 
 import './App.css';
 
@@ -200,26 +202,64 @@ function AppContent() {
       </header>
 
       <main className="app-main">
-        {movies.loading && <div className="loading">Memuat...</div>}
+        {/* Welcome Screen - Show when no search term and not loading */}
+        {!movies.loading && !movies.error && !searchTerm && viewMode === 'search' && (
+          <WelcomeScreen
+            onViewDetail={handleViewDetail}
+            onToggleFavorite={handleToggleFavorite}
+            onToggleWatchlist={handleToggleWatchlist}
+            isFavorite={collections.isFavorite}
+            isInWatchlist={collections.isInWatchlist}
+          />
+        )}
+
+        {/* Loading State with Skeleton */}
+        {movies.loading && <SkeletonLoader count={ITEMS_PER_PAGE} />}
         
+        {/* Error State */}
         {movies.error && !movies.loading && (
-          <div className="error">{movies.error}</div>
+          <div className="error-container">
+            <div className="error-icon">⚠️</div>
+            <div className="error-title">Oops! Terjadi Kesalahan</div>
+            <div className="error-message">{movies.error}</div>
+            <button 
+              className="error-retry-btn"
+              onClick={() => searchTerm && movies.searchMovies(searchTerm, currentPage)}
+            >
+              Coba Lagi
+            </button>
+          </div>
         )}
 
+        {/* Empty States */}
         {!movies.loading && !movies.error && paginatedMovies.length === 0 && viewMode === 'search' && searchTerm && (
-          <div className="no-results">Tidak ada hasil ditemukan</div>
-        )}
-
-        {!movies.loading && !movies.error && paginatedMovies.length === 0 && viewMode === 'search' && !searchTerm && (
-          <div className="welcome">Masukkan judul film untuk mencari</div>
+          <div className="empty-state">
+            <div className="empty-icon">🔍</div>
+            <div className="empty-title">Tidak ada hasil ditemukan</div>
+            <div className="empty-message">
+              Coba gunakan kata kunci yang berbeda atau periksa ejaan Anda.
+            </div>
+          </div>
         )}
 
         {!movies.loading && !movies.error && paginatedMovies.length === 0 && viewMode === 'favorites' && (
-          <div className="no-results">Belum ada film favorit</div>
+          <div className="empty-state">
+            <div className="empty-icon">❤️</div>
+            <div className="empty-title">Belum ada film favorit</div>
+            <div className="empty-message">
+              Klik tombol hati pada film untuk menambahkannya ke favorit.
+            </div>
+          </div>
         )}
 
         {!movies.loading && !movies.error && paginatedMovies.length === 0 && viewMode === 'watchlist' && (
-          <div className="no-results">Belum ada film di watchlist</div>
+          <div className="empty-state">
+            <div className="empty-icon">➕</div>
+            <div className="empty-title">Belum ada film di watchlist</div>
+            <div className="empty-message">
+              Klik tombol plus pada film untuk menambahkannya ke watchlist.
+            </div>
+          </div>
         )}
 
         {displayedMovies.length > 0 && (
